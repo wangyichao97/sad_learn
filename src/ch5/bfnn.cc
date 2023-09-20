@@ -12,8 +12,7 @@ int bfnn_point(CloudPtr cloud, const Vec3f& point) {
                             [&point](const PointType& pt1, const PointType& pt2) -> bool {
                                 return (pt1.getVector3fMap() - point).squaredNorm() <
                                        (pt2.getVector3fMap() - point).squaredNorm();
-                            }) -
-           cloud->points.begin();
+                            }) - cloud->points.begin();
 }
 
 std::vector<int> bfnn_point_k(CloudPtr cloud, const Vec3f& point, int k) {
@@ -39,10 +38,12 @@ std::vector<int> bfnn_point_k(CloudPtr cloud, const Vec3f& point, int k) {
 void bfnn_cloud_mt(CloudPtr cloud1, CloudPtr cloud2, std::vector<std::pair<size_t, size_t>>& matches) {
     // 先生成索引
     std::vector<size_t> index(cloud2->size());
-    std::for_each(index.begin(), index.end(), [idx = 0](size_t& i) mutable { i = idx++; });
+    //该[idx = 0]引入一个 idx 的局部变量，并初始化为0，只在Lambda表达式内部可见，表示 cloud2 中的点的索引
+    std::for_each(index.begin(), index.end(), [idx = 0](size_t& i) mutable { i = idx++; });   //mutable：使得被修饰变量（参数 i）永远可变
 
     // 并行化for_each
-    matches.resize(index.size());
+    matches.resize(index.size());   //调整大小
+    //std::execution::par_unseq为C++17 中的并行执行策略
     std::for_each(std::execution::par_unseq, index.begin(), index.end(), [&](auto idx) {
         matches[idx].second = idx;
         matches[idx].first = bfnn_point(cloud1, ToVec3f(cloud2->points[idx]));

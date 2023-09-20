@@ -13,7 +13,7 @@
 namespace sad {
 
 /**
- * Brute-force Nearest Neighbour
+ * Brute-force Nearest Neighbour，以point为输入，与点云中的每个点计算误差并取最小值，并返回最近点在点云中的索引
  * @param cloud 点云
  * @param point 待查找点
  * @return 找到的最近点索引
@@ -50,7 +50,7 @@ void bfnn_cloud_mt(CloudPtr cloud1, CloudPtr cloud2, std::vector<std::pair<size_
  * 对点云进行BF最近邻 多线程版本，k近邻
  * @param cloud1
  * @param cloud2
- * @param matches
+ * @param matches   保存匹配的点对
  */
 void bfnn_cloud_mt_k(CloudPtr cloud1, CloudPtr cloud2, std::vector<std::pair<size_t, size_t>>& matches, int k = 5);
 }  // namespace sad
