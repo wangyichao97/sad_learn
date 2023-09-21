@@ -21,7 +21,7 @@ namespace sad {
 int bfnn_point(CloudPtr cloud, const Vec3f& point);
 
 /**
- * Brute-force Nearest Neighbour, k近邻
+ * Brute-force Nearest Neighbour, k近邻 test
  * @param cloud 点云
  * @param point 待查找点
  * @param k 近邻数
