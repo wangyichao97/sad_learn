@@ -74,6 +74,8 @@
         "set": "cpp",
         "string": "cpp",
         "string_view": "cpp",
-        "variant": "cpp"
+        "variant": "cpp",
+        "execution": "cpp",
+        "bit": "cpp"
     }
 }

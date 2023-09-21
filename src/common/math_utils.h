@@ -110,21 +110,28 @@ void ComputeMedian(const C& data, D& median, Getter&& getter) {
 
 template <typename S>
 bool FitPlane(std::vector<Eigen::Matrix<S, 3, 1>>& data, Eigen::Matrix<S, 4, 1>& plane_coeffs, double eps = 1e-2) {
+    
+    //验证点能否组成一个平面
     if (data.size() < 3) {
         return false;
     }
 
+    //创建一个大小为 (点数 x 4) 的矩阵 A，每一行对应一个点的坐标，列数为4（点集的坐标和额外的一列）
     Eigen::MatrixXd A(data.size(), 4);
+    //存储坐标到A中
     for (int i = 0; i < data.size(); ++i) {
         A.row(i).head<3>() = data[i].transpose();
         A.row(i)[3] = 1.0;
     }
 
+    //使用奇异值分解（SVD）来拟合平面，Eigen::ComputeThinV 表示只计算右奇异向量V(-1)
     Eigen::JacobiSVD svd(A, Eigen::ComputeThinV);
+    //从 SVD 的结果中提取平面系数，即平面的法向量和距离原点的偏移
     plane_coeffs = svd.matrixV().col(3);
 
-    // check error eps
+    // check error eps,检查每个点到平面的距离是否小于给定的阈值 eps
     for (int i = 0; i < data.size(); ++i) {
+        //计算了点到平面的距离,plane_coeffs.template head<3>() 是平面的法向量，plane_coeffs[3] 是平面的偏移
         double err = plane_coeffs.template head<3>().dot(data[i]) + plane_coeffs[3];
         if (err * err > eps) {
             return false;

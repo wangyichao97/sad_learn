@@ -33,6 +33,7 @@ class GridNN {
 
         // for 3D
         NEARBY6,  // 上下左右前后
+        NEARBY14, //上下左右前后+对角
     };
 
     /**
@@ -130,19 +131,28 @@ void GridNN<3>::GenerateNearbyGrids() {
     } else if (nearby_type_ == NearbyType::NEARBY6) {
         nearby_grids_ = {KeyType(0, 0, 0),  KeyType(-1, 0, 0), KeyType(1, 0, 0), KeyType(0, 1, 0),
                          KeyType(0, -1, 0), KeyType(0, 0, -1), KeyType(0, 0, 1)};
+    } else if (nearby_type_ == NearbyType::NEARBY14){
+        nearby_grids_ = {KeyType(0, 0, 0),  KeyType(-1, 0, 0), KeyType(1, 0, 0), KeyType(0, 1, 0),
+                         KeyType(0, -1, 0), KeyType(0, 0, -1), KeyType(0, 0, 1), 
+                         KeyType(1, 1, 1), KeyType(1, -1, 1), KeyType(-1, 1, 1), KeyType(-1, -1, 1),
+                         KeyType(1, 1, -1), KeyType(1, -1, -1), KeyType(-1, 1, -1), KeyType(-1, -1, -1)};
     }
 }
+
 
 template <int dim>
 bool GridNN<dim>::GetClosestPoint(const PointType& pt, PointType& closest_pt, size_t& idx) {
     // 在pt栅格周边寻找最近邻
     std::vector<size_t> idx_to_check;
+    // 将输入点 pt 转换为栅格坐标，用于确定要查找最近邻的栅格
     auto key = Pos2Grid(ToEigen<float, dim>(pt));
 
+    //delta为lambda 函数的参数名，为nearby_grids_中传入的元素
     std::for_each(nearby_grids_.begin(), nearby_grids_.end(), [&key, &idx_to_check, this](const KeyType& delta) {
-        auto dkey = key + delta;
-        auto iter = grids_.find(dkey);
+        auto dkey = key + delta;        //计算了相对于当前栅格坐标 key 的偏移量 delta 后的新栅格坐标 dkey
+        auto iter = grids_.find(dkey);  //查找具有栅格坐标 dkey 的栅格索引
         if (iter != grids_.end()) {
+            //将查找到的最临近数据的索引插入idx_to_check中
             idx_to_check.insert(idx_to_check.end(), iter->second.begin(), iter->second.end());
         }
     });
@@ -152,14 +162,16 @@ bool GridNN<dim>::GetClosestPoint(const PointType& pt, PointType& closest_pt, si
     }
 
     // brute force nn in cloud_[idx]
-    CloudPtr nearby_cloud(new PointCloudType);
-    std::vector<size_t> nearby_idx;
+    CloudPtr nearby_cloud(new PointCloudType);  //存储最近邻的点
+    std::vector<size_t> nearby_idx;             //存储最近邻的点的索引
     for (auto& idx : idx_to_check) {
         nearby_cloud->points.template emplace_back(cloud_->points[idx]);
         nearby_idx.emplace_back(idx);
     }
 
+    //找到在 nearby_cloud 中距离输入点 pt 最近的点的索引
     size_t closest_point_idx = bfnn_point(nearby_cloud, ToVec3f(pt));
+    //将最近邻的点的坐标存储在 closest_pt 中，并将该点的索引存储在 idx 中
     idx = nearby_idx.at(closest_point_idx);
     closest_pt = cloud_->points[idx];
 
@@ -171,10 +183,12 @@ bool GridNN<dim>::GetClosestPointForCloud(CloudPtr ref, CloudPtr query,
                                           std::vector<std::pair<size_t, size_t>>& matches) {
     matches.clear();
     std::vector<size_t> index(query->size());
+    //使索引向量 index与查询点云 query 中的点一一对应
     std::for_each(index.begin(), index.end(), [idx = 0](size_t& i) mutable { i = idx++; });
     std::for_each(index.begin(), index.end(), [this, &matches, &query](const size_t& idx) {
         PointType cp;
         size_t cp_idx;
+        //将对应的最邻近点放入matches中
         if (GetClosestPoint(query->points[idx], cp, cp_idx)) {
             matches.emplace_back(cp_idx, idx);
         }
